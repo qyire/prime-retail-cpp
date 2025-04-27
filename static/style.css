@@ -1,0 +1,17 @@
+/* Basic styling for PrimeRetail Demo */
+body {
+    font-family: sans-serif;
+    padding: 20px;
+}
+
+#controls,
+#products {
+    margin-bottom: 20px;
+    padding: 15px;
+    border: 1px solid #ccc;
+}
+
+#status {
+    font-style: italic;
+    color: #555;
+} 

@@ -1,0 +1,62 @@
+[
+  {
+    "id": "SKU001",
+    "name": "Basic Red T-Shirt",
+    "attributes": { "color": "red", "size": "M", "material": "cotton" }
+  },
+  {
+    "id": "SKU002",
+    "name": "Blue Wool Sweater",
+    "attributes": { "color": "blue", "size": "L", "material": "wool" }
+  },
+  {
+    "id": "SKU003",
+    "name": "Green Polyester Pants",
+    "attributes": { "color": "green", "size": "S", "material": "polyester" }
+  },
+  {
+    "id": "SKU004",
+    "name": "Red Cotton T-Shirt",
+    "attributes": { "color": "red", "size": "L", "material": "cotton" }
+  },
+  {
+    "id": "SKU005",
+    "name": "Blue Cotton Shirt",
+    "attributes": { "color": "blue", "size": "M", "material": "cotton" }
+  },
+  {
+    "id": "SKU006",
+    "name": "Green Wool Scarf",
+    "attributes": { "color": "green", "size": "M", "material": "wool" } 
+  },
+  {
+    "id": "SKU007",
+    "name": "Red Polyester Jacket",
+    "attributes": { "color": "red", "size": "M", "material": "polyester" }
+  },
+  {
+    "id": "SKU008",
+    "name": "Blue Polyester Shorts",
+    "attributes": { "color": "blue", "size": "S", "material": "polyester" }
+  },
+  {
+    "id": "SKU009",
+    "name": "Green Cotton Hat",
+    "attributes": { "color": "green", "size": "L", "material": "cotton" }
+  },
+   {
+    "id": "SKU010",
+    "name": "Red Wool Gloves",
+    "attributes": { "color": "red", "size": "S", "material": "wool" }
+  },
+  {
+    "id": "SKU011",
+    "name": "Plain Blue T-Shirt",
+    "attributes": { "color": "blue", "size": "M", "material": "cotton" }
+  },
+  {
+    "id": "SKU012",
+    "name": "Plain Green T-Shirt",
+    "attributes": { "color": "green", "size": "M", "material": "cotton" }
+  }
+] 

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PrimeRetail Demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>PrimeRetail - SFI Filtering Demo</h1>
+
+    <div id="status">Loading WASM module...</div>
+
+    <div id="controls">
+        <h2>Filters</h2>
+        <div class="filter-group">
+            <label>Master (Color):</label>
+            <select id="filter-color">
+                <option value="1">Any Color</option> 
+                <option value="2">Red</option>
+                <option value="3">Blue</option>
+                <option value="5">Green</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Local (Size):</label>
+            <select id="filter-size">
+                <option value="1">Any Size</option> 
+                <option value="7">S</option>
+                <option value="11">M</option>
+                <option value="13">L</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Local (Material):</label>
+            <select id="filter-material">
+                <option value="1">Any Material</option> 
+                <option value="17">Cotton</option>
+                <option value="19">Polyester</option>
+                <option value="23">Wool</option>
+            </select>
+        </div>
+        <!-- Button starts disabled until WASM is ready -->
+        <button id="filter-button" disabled>Apply Filters</button> 
+    </div>
+
+    <div id="products">
+        <h2>Results</h2>
+        <div id="results-count">Total items: 0 | Matching: 0</div>
+        <ul id="results-list"></ul>
+    </div>
+
+    <!-- Area to display console output from WASM -->
+    <div id="wasm-output" style="display: none; margin-top: 20px;">
+        <h3>WASM Console Output</h3>
+        <pre id="wasm-console" style="background: #f0f0f0; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: scroll;"></pre>
+    </div>
+    
+    <!-- Load the Emscripten-generated JS glue -->
+    <!-- Path assumes wasm_build is adjacent to static, adjust if needed -->
+    <script>
+        // Define the Emscripten Module object *before* loading the main script
+        // This allows capturing status updates and console output during initialization.
+        var Module = {
+            preRun: [],
+            postRun: [],
+            print: (function() {
+                var element = document.getElementById('wasm-console');
+                // Clear on first print after load?
+                // if (element) element.innerHTML = ''; 
+                return function(text) {
+                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                    console.log(text); // Also log to browser console
+                    if (element) {
+                        element.innerHTML += text + "\n"
+                        element.scrollTop = element.scrollHeight; // focus on bottom
+                        // Make the output area visible if it's hidden
+                        document.getElementById('wasm-output').style.display = 'block'; 
+                    }
+                };
+            })(),
+            printErr: function(text) {
+                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+                console.error(text); // Log errors to browser console
+                var element = document.getElementById('wasm-console');
+                if (element) {
+                    // Display errors in red
+                    element.innerHTML += '<span style="color: red;">' + text + '</span>\n';
+                    element.scrollTop = element.scrollHeight; // focus on bottom
+                    document.getElementById('wasm-output').style.display = 'block';
+                }
+            },
+            setStatus: function(text) {
+                const statusElement = document.getElementById('status');
+                if (statusElement) {
+                    statusElement.textContent = text;
+                    console.log('WASM Status:', text);
+                }
+            },
+            totalDependencies: 0,
+            monitorRunDependencies: function(left) {
+                // Standard Emscripten hook to monitor loading progress
+                this.totalDependencies = Math.max(this.totalDependencies, left);
+                this.setStatus(left ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
+            }
+        };
+        // Initial status message before the module starts loading
+        Module.setStatus('Downloading WASM...');
+        // Basic error handling for global errors during script loading
+        window.onerror = function(event) {
+            Module.setStatus('Error: Exception thrown, see JavaScript console');
+            // Module.setStatus = function(text) { // Optional: Disable further status updates
+            //     if (text) console.error('[post-exception status] ' + text);
+            // };
+        };
+    </script>
+    <!-- main.js is loaded as a module, it will interact with the Module object -->
+    <script type="module" src="../src/js/main.js"></script>
+</body>
+</html> 

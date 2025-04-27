@@ -1,0 +1,26 @@
+{
+  "attribute_to_prime": {
+    "color": {
+      "red": 2,
+      "blue": 3,
+      "green": 5
+    },
+    "size": {
+      "S": 7,
+      "M": 11,
+      "L": 13
+    },
+    "material": {
+      "cotton": 17,
+      "polyester": 19,
+      "wool": 23
+    }
+  },
+  "master_attributes": [
+    "color"
+  ],
+  "local_attributes": [
+    "size",
+    "material"
+  ]
+} 
