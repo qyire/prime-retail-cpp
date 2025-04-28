@@ -1,0 +1,41 @@
+{
+  "attribute_to_prime": {
+    "color": {
+      "Red": 13,
+      "Blue": 2,
+      "Green": 3,
+      "Yellow": 5,
+      "Black": 7,
+      "White": 11,
+      "Orange": 31,
+      "Purple": 37,
+      "Gray": 41,
+      "Pink": 43,
+      "Brown": 47,
+      "Cyan": 53
+    },
+    "size": {
+      "XS": 59,
+      "S": 61,
+      "M": 67,
+      "L": 71,
+      "XL": 73,
+      "XXL": 79,
+      "3XL": 83
+    },
+    "material": {
+      "Cotton": 19,
+      "Polyester": 23,
+      "Wool": 29,
+      "Silk": 101,
+      "Rayon": 103,
+      "Spandex Blend": 107,
+      "Linen": 109,
+      "Denim": 113,
+      "Fleece": 127,
+      "Nylon": 131,
+      "Leatherette": 89,
+      "Corduroy": 97
+    }
+  }
+}

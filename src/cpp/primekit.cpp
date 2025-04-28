@@ -3,23 +3,78 @@
 #include <iostream> // For potential debugging
 #include <numeric>  // Not strictly needed for this impl, but useful potentially
 #include <limits>   // For UINT64_MAX
+#include <stdexcept> // For exceptions
+#include "nlohmann/json.hpp" // Use standard include path managed by CMake
+#include <cstdint> // For uint64_t
+#include <cmath> // For std::pow
+
+// Use the nlohmann json namespace
+using json = nlohmann::json;
 
 // --- PrimeKit Implementation ---
 
+// Constructor is now simpler, prime maps loaded separately
 PrimeKit::PrimeKit() {
-    // Initialize hardcoded prime dictionaries based on data/primes.json structure
-    // Master Primes (e.g., only 'color')
-    master_primes_["color"] = {{"red", 2}, {"blue", 3}, {"green", 5}};
-    // Add other master attributes and primes here if needed
+    std::cout << "[WASM] PrimeKit constructed. Ready to load primes and inventory." << std::endl;
+}
 
-    // Local Primes (e.g., 'size', 'material')
-    local_primes_["size"] = {{"S", 7}, {"M", 11}, {"L", 13}};
-    local_primes_["material"] = {{"cotton", 17}, {"polyester", 19}, {"wool", 23}};
-    // Add other local attributes and primes here if needed
+PrimeKit::~PrimeKit() {
+    std::cout << "[WASM] PrimeKit destructed." << std::endl;
+}
 
-    // Define which attribute keys belong to which SFI tier
-    master_attribute_keys_ = {"color"};
-    local_attribute_keys_ = {"size", "material"};
+// New method to load primes from a JSON string
+void PrimeKit::initializePrimesFromJson(const std::string& json_string) {
+    std::cout << "[WASM] Parsing primes JSON... Got string length: " << json_string.length() << std::endl;
+    attribute_prime_map.clear(); // Clear previous primes
+
+    try {
+        json primes_json = json::parse(json_string);
+        std::cout << "[WASM] Parsed JSON successfully. Checking sections..." << std::endl;
+
+        if (primes_json.contains("attribute_to_prime")) {
+            std::cout << "[WASM] Found attribute_to_prime section." << std::endl;
+            const auto& attributes = primes_json["attribute_to_prime"];
+            if (attributes.is_object()) {
+                std::cout << "[WASM] Iterating attributes..." << std::endl;
+                for (auto const& [attr_key, attr_values] : attributes.items()) {
+                    std::cout << "[WASM]   Attr Key: " << attr_key << std::endl;
+                    if (attr_values.is_object()) {
+                         std::cout << "[WASM]     Iterating values for " << attr_key << "..." << std::endl;
+                        for (auto const& [val_key, prime_val] : attr_values.items()) {
+                            if (prime_val.is_number_unsigned()) {
+                                uint64_t prime = prime_val.get<uint64_t>();
+                                std::cout << "[WASM]       Value Key: " << val_key << ", Raw Prime: " << prime << std::endl;
+                                if (prime > 1) { // Basic prime check (ensure it's not 1)
+                                    attribute_prime_map[attr_key][val_key] = prime;
+                                     std::cout << "[WASM]         -> Stored Prime: " << prime << std::endl;
+                                } else {
+                                    std::cerr << "[WASM Warning] Prime value for [" << attr_key << "][" << val_key << "] is not > 1. Skipping." << std::endl;
+                                }
+                            } else {
+                                std::cerr << "[WASM Warning] Prime value for [" << attr_key << "][" << val_key << "] is not an unsigned integer. Skipping." << std::endl;
+                            }
+                        }
+                    } else {
+                         std::cerr << "[WASM Warning] Value map for attribute '" << attr_key << "' is not an object. Skipping." << std::endl;
+                    }
+                }
+            } else {
+                 std::cerr << "[WASM Error] 'attribute_to_prime' section is not an object." << std::endl;
+            }
+        } else {
+            std::cerr << "[WASM Error] Required section 'attribute_to_prime' not found in primes JSON." << std::endl;
+            throw std::runtime_error("Invalid primes JSON format: missing 'attribute_to_prime' section.");
+        }
+
+        std::cout << "[WASM] Successfully parsed primes JSON. Attributes found: " << attribute_prime_map.size() << std::endl;
+
+    } catch (json::parse_error& e) {
+        std::cerr << "[WASM Error] Failed to parse primes JSON: " << e.what() << std::endl;
+        throw std::runtime_error("Failed to parse primes JSON.");
+    } catch (std::exception& e) {
+        std::cerr << "[WASM Error] Error processing primes: " << e.what() << std::endl;
+         throw std::runtime_error("Error processing primes.");
+    }
 }
 
 // Helper to get prime, returns 1 (neutral element for multiplication) if not found
@@ -39,78 +94,147 @@ uint64_t PrimeKit::get_prime(const PrimeDictionary& dict, const std::string& key
     return 1; // Return 1 if attribute or value is not found or invalid
 }
 
-// Encodes SFI based on selected attributes and primes
-uint64_t PrimeKit::encode_sfi(const ItemData& attributes, const std::vector<std::string>& relevant_keys, const PrimeDictionary& prime_dict) {
+// Encodes SFI based on selected attributes and primes (handles multi-value)
+uint64_t PrimeKit::encode_sfi(const ItemAttributes& attributes, const std::vector<std::string>& relevant_keys, const PrimeDictionary& prime_dict) {
     uint64_t sfi = 1;
     const uint64_t max_val = std::numeric_limits<uint64_t>::max();
 
-    for (const std::string& key : relevant_keys) {
+    for (const std::string& key : relevant_keys) { // e.g., key = "color"
         auto attr_it = attributes.find(key);
         if (attr_it != attributes.end()) {
-            uint64_t prime = get_prime(prime_dict, key, attr_it->second);
+            // attr_it->second is now a std::vector<std::string>, e.g., ["Red", "Blue"]
+            for (const std::string& value : attr_it->second) { // Iterate through values ("Red", then "Blue")
+                uint64_t prime = get_prime(prime_dict, key, value); // Get prime for "Red", then prime for "Blue"
 
-            if (prime > 1) {
-                // Check for potential overflow before multiplying
-                if (sfi > max_val / prime) {
-                    std::cerr << "ERROR: SFI overflow detected during encoding! Key: " << key
-                              << ", Value: " << attr_it->second << ", Prime: " << prime
-                              << ", Current SFI: " << sfi << std::endl;
-                    // Handle overflow - returning 1 signifies an error or unusable SFI
-                    // Alternatively, could throw an exception if required.
-                    return 1; // Indicate error/invalid SFI
+                if (prime > 1) {
+                    // Check for potential overflow before multiplying
+                    if (sfi > max_val / prime) {
+                        std::cerr << "ERROR: SFI overflow detected during encoding! Key: " << key
+                                  << ", Value: " << value << ", Prime: " << prime
+                                  << ", Current SFI: " << sfi << std::endl;
+                        return 1; // Indicate error/invalid SFI
+                    }
+                    sfi *= prime; // Multiply the prime into the SFI
                 }
-                sfi *= prime;
-            }
-        } else {
-             // Optional: Add warning if an expected attribute is missing from item data
-             // std::cerr << "Warning: Attribute key '" << key << "' not found in item data for SFI encoding." << std::endl;
+            } // End loop through values for this key
         }
-    }
+        // else: Optional warning if key (e.g. "color") is missing entirely
+    } // End loop through relevant keys
     return sfi;
 }
 
 // Processes a single item's raw data to calculate its SFIs
 // Note: This method isn't directly exposed to JS in this version
-std::tuple<uint64_t, uint64_t> PrimeKit::process_item(const ItemData& item) {
-    uint64_t master_sfi = encode_sfi(item, master_attribute_keys_, master_primes_);
-    uint64_t local_sfi = encode_sfi(item, local_attribute_keys_, local_primes_);
+std::tuple<uint64_t, uint64_t> PrimeKit::process_item_attributes(const ItemAttributes& item_attributes) {
+    uint64_t master_sfi = encode_sfi(item_attributes, master_attribute_keys_, master_primes_);
+    uint64_t local_sfi = encode_sfi(item_attributes, local_attribute_keys_, local_primes_);
     // If encoding failed (overflow), the SFI will be 1
     return std::make_tuple(master_sfi, local_sfi);
 }
 
-// Initializes the internal SKU list from inventory data passed from JS
-void PrimeKit::initialize_data(const std::vector<SkuData>& inventory_data) {
-    internal_sku_data_.clear();
-    internal_sku_data_.reserve(inventory_data.size()); // Optimize allocation
-    internal_sku_data_ = inventory_data; // Directly assign the vector passed from JS
-    std::cout << "Initialized PrimeKit with " << internal_sku_data_.size() << " SKUs." << std::endl;
+// Initializes from inventory JSON string
+void PrimeKit::initializeFromJson(const std::string& json_string) {
+    std::cout << "[WASM] Parsing inventory JSON..." << std::endl;
+    internal_sku_data_.clear(); // Use correct member name
+
+    try {
+        json inventory_json = json::parse(json_string);
+        if (!inventory_json.is_array()) {
+            throw std::runtime_error("Inventory JSON is not an array.");
+        }
+
+        internal_sku_data_.reserve(inventory_json.size()); // Use correct member name
+
+        for (const auto& item : inventory_json) {
+            if (!item.is_object() || !item.contains("id") || !item.contains("attributes")) {
+                std::cerr << "[WASM Warning] Skipping invalid inventory item format." << std::endl;
+                continue;
+            }
+
+            SkuData sku;
+            sku.id = item["id"].get<std::string>();
+            sku.sfi = 1;
+
+            const auto& attributes = item["attributes"];
+            if (attributes.is_object()) {
+                for (auto const& [attr_key, attr_values] : attributes.items()) {
+                    // IMPORTANT: Skip 'brand' attribute for SFI calculation
+                    if (attr_key == "brand") continue; 
+
+                    if (!attribute_prime_map.count(attr_key)) {
+                        // std::cout << "[WASM Note] Skipping attribute '" << attr_key << "' for SFI calculation (no prime map)." << std::endl;
+                        continue; // Attribute type not in our prime map
+                    }
+                    const auto& prime_value_map = attribute_prime_map.at(attr_key);
+
+                    if (attr_values.is_array()) {
+                        for (const auto& val : attr_values) {
+                            if (val.is_string()) {
+                                std::string val_str = val.get<std::string>();
+                                if (prime_value_map.count(val_str)) {
+                                    uint64_t prime = prime_value_map.at(val_str);
+                                    uint64_t current_sfi = sku.sfi;
+                                    // Overflow check before multiplication
+                                    if (prime > 0 && current_sfi > UINT64_MAX / prime) {
+                                        std::cerr << "[WASM Warning] SFI overflow detected for SKU " << sku.id 
+                                                  << " while multiplying by prime " << prime << " for attribute [" << attr_key << "][" << val_str << "]! SFI will be capped." << std::endl;
+                                        sku.sfi = UINT64_MAX;
+                                        goto next_item; // Skip rest of attrs for this item if overflow
+                                    } else if (prime > 1) {
+                                        sku.sfi *= prime;
+                                    }
+                                }
+                                // else: Value not found in prime map for this attribute - ignored for SFI
+                            }
+                        }
+                    }
+                     // else: Attribute values not an array - ignored
+                }
+            } 
+            // else: Attributes section not an object - ignored
+
+            internal_sku_data_.push_back(sku); // Use correct member name
+        next_item:;
+        }
+
+        std::cout << "[WASM] Initialized PrimeKit with " << internal_sku_data_.size() << " SKUs from JSON." << std::endl; // Use correct member name
+
+    } catch (json::parse_error& e) {
+        std::cerr << "[WASM Error] Failed to parse inventory JSON: " << e.what() << std::endl;
+        throw std::runtime_error("Failed to parse inventory JSON.");
+    } catch (std::exception& e) {
+         std::cerr << "[WASM Error] Error processing inventory: " << e.what() << std::endl;
+         throw std::runtime_error("Error processing inventory.");
+    }
 }
 
 // Filters the loaded SKUs based on query SFIs
-std::vector<std::string> PrimeKit::perform_filter(uint64_t master_query, uint64_t local_query) {
-    std::vector<std::string> matching_sku_ids;
-    // Query value 1 means 'match all' for that tier (wildcard)
-    // Query value 0 is invalid, treat as 1 (wildcard)
-    if (master_query == 0) master_query = 1;
-    if (local_query == 0) local_query = 1;
+// Reverted to return vector<FilterResult>
+std::vector<FilterResult> PrimeKit::perform_filter(uint64_t query_sfi) {
+    std::cout << "[WASM] Filtering with Query SFI: " << query_sfi << std::endl;
+    std::vector<FilterResult> matching_results;
+    
+    if (query_sfi == 0) { // Avoid division by zero
+        std::cerr << "[WASM Error] Query SFI cannot be zero." << std::endl;
+        return matching_results; // Return empty vector
+    }
+    if (query_sfi == 1) { // Optimization: If query is 1, all items match
+        matching_results.reserve(internal_sku_data_.size()); // Use correct member name
+        for (const auto& item : internal_sku_data_) { // Use correct member name
+             matching_results.push_back({item.id, item.sfi});
+        }
+        std::cout << "[WASM] Query SFI is 1, returning all " << internal_sku_data_.size() << " SKUs." << std::endl; // Use correct member name
+        return matching_results;
+    }
 
-    std::cout << "Filtering with Master Query: " << master_query << ", Local Query: " << local_query << std::endl;
-
-    for (const auto& sku : internal_sku_data_) {
-        // Skip SKUs that had encoding errors (SFI is 1)
-        if (sku.master_sfi == 1 && master_query != 1) continue;
-        if (sku.local_sfi == 1 && local_query != 1) continue;
-
-        // The core two-tier divisibility check:
-        bool master_match = (master_query == 1 || (sku.master_sfi % master_query == 0));
-        bool local_match = (local_query == 1 || (sku.local_sfi % local_query == 0));
-
-        if (master_match && local_match) {
-            matching_sku_ids.push_back(sku.sku_id);
+    for (const auto& item : internal_sku_data_) { // Use correct member name
+        if (item.sfi != 0 && item.sfi % query_sfi == 0) { // Check divisibility
+             matching_results.push_back({item.id, item.sfi});
         }
     }
-    std::cout << "Found " << matching_sku_ids.size() << " matching SKUs." << std::endl;
-    return matching_sku_ids;
+
+    std::cout << "[WASM] Found " << matching_results.size() << " matching SKUs." << std::endl;
+    return matching_results;
 }
 
 // --- Embind Bindings ---
@@ -118,29 +242,26 @@ std::vector<std::string> PrimeKit::perform_filter(uint64_t master_query, uint64_
 using namespace emscripten;
 
 EMSCRIPTEN_BINDINGS(primekit_module) {
-    // Bind the SkuData struct as a value object (can be passed by value)
-    value_object<SkuData>("SkuData")
-        .field("sku_id", &SkuData::sku_id)
-        .field("master_sfi", &SkuData::master_sfi)
-        .field("local_sfi", &SkuData::local_sfi);
+    
+    // Ensure FilterResult struct is registered
+    value_object<FilterResult>("FilterResult")
+        .field("id", &FilterResult::id)
+        .field("sfi", &FilterResult::sfi)
+        ;
 
-    // Register std::vector<SkuData> for passing between JS and C++
-    register_vector<SkuData>("VectorSkuData");
-    // Register std::vector<std::string> for returning results
+    // Ensure vector<FilterResult> is registered
+    register_vector<FilterResult>("VectorFilterResult");
+    
+    // Keep VectorString registered (optional, no harm)
     register_vector<std::string>("VectorString");
 
     // Bind the PrimeKit class
     class_<PrimeKit>("PrimeKit")
-        .constructor<>() // Bind the default constructor
-        // Allow JS to create SkuData objects needed for initialize_data
-        // Note: This relies on the SkuData() and SkuData(std::string, uint64_t, uint64_t) constructors
-        // It might be cleaner for JS to pass raw data and have C++ construct SkuData,
-        // but passing the vector directly simplifies the C++ side as per the header change.
-        .function("initializeData", &PrimeKit::initialize_data, allow_raw_pointers())
-        .function("performFilter", &PrimeKit::perform_filter);
+        .constructor<>()
+        .function("initializePrimesFromJson", &PrimeKit::initializePrimesFromJson)
+        .function("initializeFromJson", &PrimeKit::initializeFromJson)
+        .function("perform_filter", &PrimeKit::perform_filter)
+        // Allow the instance to be deleted from JS, explicitly allowing raw pointer
+        .function("delete", &PrimeKit::delete_, allow_raw_pointers());
 
-    // Note: We are not binding get_prime, encode_sfi, or process_item directly.
-    // JS will need to fetch/manage its own prime mappings to create the query SFIs.
-    // JS will also need to pre-process the raw inventory JSON into a structure
-    // matching VectorSkuData before calling initializeData.
 } 

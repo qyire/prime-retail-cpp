@@ -9,112 +9,107 @@
 <body>
     <h1>PrimeRetail - SFI Filtering Demo</h1>
 
-    <div id="status">Loading WASM module...</div>
+    <div id="status">Initializing UI...</div>
 
-    <div id="controls">
-        <h2>Filters</h2>
-        <div class="filter-group">
-            <label>Master (Color):</label>
-            <select id="filter-color">
-                <option value="1">Any Color</option> 
-                <option value="2">Red</option>
-                <option value="3">Blue</option>
-                <option value="5">Green</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Local (Size):</label>
-            <select id="filter-size">
-                <option value="1">Any Size</option> 
-                <option value="7">S</option>
-                <option value="11">M</option>
-                <option value="13">L</option>
-            </select>
-        </div>
-        <div class="filter-group">
-            <label>Local (Material):</label>
-            <select id="filter-material">
-                <option value="1">Any Material</option> 
-                <option value="17">Cotton</option>
-                <option value="19">Polyester</option>
-                <option value="23">Wool</option>
-            </select>
-        </div>
-        <!-- Button starts disabled until WASM is ready -->
-        <button id="filter-button" disabled>Apply Filters</button> 
+    <div id="sku-search-area" class="filter-group" style="padding-bottom: 10px;">
+        <label for="sku-search-input" style="margin-right: 5px;">Search by SKU ID:</label>
+        <input type="text" id="sku-search-input" placeholder="e.g., SKU00123" size="15" style="margin-right: 5px;">
+        <button id="sku-search-button">Search</button>
+        <button id="clear-search-button" style="margin-left: 10px;">Clear Search / Show All</button>
     </div>
 
-    <div id="products">
-        <h2>Results</h2>
-        <div id="results-count">Total items: 0 | Matching: 0</div>
-        <ul id="results-list"></ul>
+    <div id="segment-selector" class="filter-group">
+        <label for="segment-select">Brand Segment:</label>
+        <select id="segment-select">
+            <option value="">-- Select Brand --</option>
+            <!-- Options will be loaded dynamically by main.js -->
+        </select>
     </div>
 
-    <!-- Area to display console output from WASM -->
-    <div id="wasm-output" style="display: none; margin-top: 20px;">
-        <h3>WASM Console Output</h3>
-        <pre id="wasm-console" style="background: #f0f0f0; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: scroll;"></pre>
+    <div id="main-content" style="display: none;">
+
+        <div id="controls">
+            <h2>Filters</h2>
+            
+            <div class="filter-group" id="color-filter-group">
+                <label>Color:</label><br>
+                <!-- Color Checkboxes -->
+                <input type="checkbox" id="color-any" value="1" name="color-filter" data-name="Any Color" checked> <label for="color-any">Any Color</label><br>
+                <input type="checkbox" id="color-red" value="2" name="color-filter" data-name="Red"> <label for="color-red">Red</label><br>
+                <input type="checkbox" id="color-blue" value="3" name="color-filter" data-name="Blue"> <label for="color-blue">Blue</label><br>
+                <input type="checkbox" id="color-green" value="5" name="color-filter" data-name="Green"> <label for="color-green">Green</label><br>
+                <input type="checkbox" id="color-yellow" value="29" name="color-filter" data-name="Yellow"> <label for="color-yellow">Yellow</label><br>
+                <input type="checkbox" id="color-black" value="31" name="color-filter" data-name="Black"> <label for="color-black">Black</label><br>
+                <input type="checkbox" id="color-white" value="37" name="color-filter" data-name="White"> <label for="color-white">White</label><br>
+                <input type="checkbox" id="color-orange" value="41" name="color-filter" data-name="Orange"> <label for="color-orange">Orange</label><br>
+                <input type="checkbox" id="color-purple" value="43" name="color-filter" data-name="Purple"> <label for="color-purple">Purple</label><br>
+                <input type="checkbox" id="color-gray" value="47" name="color-filter" data-name="Gray"> <label for="color-gray">Gray</label><br>
+                <input type="checkbox" id="color-pink" value="53" name="color-filter" data-name="Pink"> <label for="color-pink">Pink</label><br>
+                <input type="checkbox" id="color-brown" value="59" name="color-filter" data-name="Brown"> <label for="color-brown">Brown</label><br>
+                <input type="checkbox" id="color-cyan" value="61" name="color-filter" data-name="Cyan"> <label for="color-cyan">Cyan</label><br>
+            </div>
+            
+            <div class="filter-group">
+                <label>Size:</label>
+                <!-- Size Dropdown (remains single select) -->
+                <select id="filter-size">
+                    <option value="1" data-name="Any Size">Any Size</option>
+                    <option value="67" data-name="XS">XS</option>
+                    <option value="7" data-name="S">S</option>
+                    <option value="11" data-name="M">M</option>
+                    <option value="13" data-name="L">L</option>
+                    <option value="71" data-name="XL">XL</option>
+                    <option value="73" data-name="XXL">XXL</option>
+                    <option value="79" data-name="3XL">3XL</option>
+                </select>
+            </div>
+            
+            <div class="filter-group" id="material-filter-group">
+                <label>Material:</label><br>
+                <!-- Material Checkboxes -->
+                <input type="checkbox" id="mat-any" value="1" name="material-filter" data-name="Any Material" checked> <label for="mat-any">Any Material</label><br>
+                <input type="checkbox" id="mat-cotton" value="17" name="material-filter" data-name="Cotton"> <label for="mat-cotton">Cotton</label><br>
+                <input type="checkbox" id="mat-polyester" value="19" name="material-filter" data-name="Polyester"> <label for="mat-polyester">Polyester</label><br>
+                <input type="checkbox" id="mat-wool" value="23" name="material-filter" data-name="Wool"> <label for="mat-wool">Wool</label><br>
+                <input type="checkbox" id="mat-silk" value="83" name="material-filter" data-name="Silk"> <label for="mat-silk">Silk</label><br>
+                <input type="checkbox" id="mat-rayon" value="89" name="material-filter" data-name="Rayon"> <label for="mat-rayon">Rayon</label><br>
+                <input type="checkbox" id="mat-spandex" value="97" name="material-filter" data-name="Spandex Blend"> <label for="mat-spandex">Spandex Blend</label><br>
+                <input type="checkbox" id="mat-linen" value="101" name="material-filter" data-name="Linen"> <label for="mat-linen">Linen</label><br>
+                <input type="checkbox" id="mat-denim" value="103" name="material-filter" data-name="Denim"> <label for="mat-denim">Denim</label><br>
+                <input type="checkbox" id="mat-fleece" value="107" name="material-filter" data-name="Fleece"> <label for="mat-fleece">Fleece</label><br>
+                <input type="checkbox" id="mat-nylon" value="109" name="material-filter" data-name="Nylon"> <label for="mat-nylon">Nylon</label><br>
+                <input type="checkbox" id="mat-leatherette" value="113" name="material-filter" data-name="Leatherette"> <label for="mat-leatherette">Leatherette</label><br>
+                <input type="checkbox" id="mat-corduroy" value="127" name="material-filter" data-name="Corduroy"> <label for="mat-corduroy">Corduroy</label><br>
+            </div>
+
+            <!-- Add Apply Filter Button -->
+            <div style="margin-top: 15px; margin-bottom: 15px;">
+                <button id="apply-filter-button" style="padding: 8px 15px; font-size: 1.1em;">Apply Filters</button>
+            </div>
+            
+        </div>
+
+        <div id="products">
+            <h2>Results</h2>
+            <div id="results-count">Total items: 0 | Matching: 0</div>
+            <!-- Simplified Results Area -->
+            <pre id="results-list" style="background-color: #f8f8f8; border: 1px solid #ddd; padding: 10px; min-height: 200px; max-height: 500px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word;"></pre>
+        </div>
+
+        <!-- Area to display console output from WASM -->
+        <div id="wasm-output" style="display: none; margin-top: 20px;">
+            <h3>WASM Console Output</h3>
+            <pre id="wasm-console" style="background: #f0f0f0; padding: 10px; border: 1px solid #ccc; max-height: 200px; overflow-y: scroll;"></pre>
+        </div>
+
     </div>
-    
+
     <!-- Load the Emscripten-generated JS glue -->
     <!-- Path assumes wasm_build is adjacent to static, adjust if needed -->
-    <script>
-        // Define the Emscripten Module object *before* loading the main script
-        // This allows capturing status updates and console output during initialization.
-        var Module = {
-            preRun: [],
-            postRun: [],
-            print: (function() {
-                var element = document.getElementById('wasm-console');
-                // Clear on first print after load?
-                // if (element) element.innerHTML = ''; 
-                return function(text) {
-                    if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-                    console.log(text); // Also log to browser console
-                    if (element) {
-                        element.innerHTML += text + "\n"
-                        element.scrollTop = element.scrollHeight; // focus on bottom
-                        // Make the output area visible if it's hidden
-                        document.getElementById('wasm-output').style.display = 'block'; 
-                    }
-                };
-            })(),
-            printErr: function(text) {
-                if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
-                console.error(text); // Log errors to browser console
-                var element = document.getElementById('wasm-console');
-                if (element) {
-                    // Display errors in red
-                    element.innerHTML += '<span style="color: red;">' + text + '</span>\n';
-                    element.scrollTop = element.scrollHeight; // focus on bottom
-                    document.getElementById('wasm-output').style.display = 'block';
-                }
-            },
-            setStatus: function(text) {
-                const statusElement = document.getElementById('status');
-                if (statusElement) {
-                    statusElement.textContent = text;
-                    console.log('WASM Status:', text);
-                }
-            },
-            totalDependencies: 0,
-            monitorRunDependencies: function(left) {
-                // Standard Emscripten hook to monitor loading progress
-                this.totalDependencies = Math.max(this.totalDependencies, left);
-                this.setStatus(left ? 'Preparing... (' + (this.totalDependencies - left) + '/' + this.totalDependencies + ')' : 'All downloads complete.');
-            }
-        };
-        // Initial status message before the module starts loading
-        Module.setStatus('Downloading WASM...');
-        // Basic error handling for global errors during script loading
-        window.onerror = function(event) {
-            Module.setStatus('Error: Exception thrown, see JavaScript console');
-            // Module.setStatus = function(text) { // Optional: Disable further status updates
-            //     if (text) console.error('[post-exception status] ' + text);
-            // };
-        };
-    </script>
-    <!-- main.js is loaded as a module, it will interact with the Module object -->
+    <!-- REMOVED the manual Module definition script block -->
+    <!-- The factory function imported in main.js now handles WASM loading -->
+    <script type="module" async src="../build/wasm_build/primekit.js"></script>
+    <!-- Ensure main.js path is correct relative to index.html -->
     <script type="module" src="../src/js/main.js"></script>
 </body>
 </html> 
