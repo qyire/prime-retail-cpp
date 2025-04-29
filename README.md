@@ -1,11 +1,11 @@
-# Prime Shipping SFI Web Application
+# PrimeRetail SFI Filtering Demo
 
-A web application demonstrating efficient server-side shipment data filtering using Python, Flask, and JavaScript. It utilizes Square-Free Integer (SFI) encoding based on prime numbers for effective attribute filtering across large shipment datasets.
+A lightweight web application demonstrating high-performance client-side SKU filtering using C++, WebAssembly (WASM), and JavaScript. It leverages Square-Free Integer (SFI) encoding based on prime numbers for efficient attribute filtering within specific brand segments.
 
 ## Core Concept
 
-- **Attribute Primes:** Shipment attributes (origin, destination, carrier, status) are mapped to unique prime numbers.
-- **Shipment SFI:** Each shipment is assigned a single SFI, calculated as the product of its attribute primes.
-- **Filtering:** User-defined criteria generate a query SFI. The backend efficiently finds matching shipments by checking if `shipment_sfi % query_sfi == 0`.
+- **Attribute Primes:** Within each brand's data, relevant attribute values (color, size, material) are mapped to unique prime numbers.
+- **SKU SFI:** Each SKU is assigned a single SFI, calculated as the product of its attribute primes.
+- **Filtering:** User selections generate a query SFI. The WASM module efficiently finds matching SKUs by checking if `sku_sfi % query_sfi == 0`.
 
-This repository showcases the core SFI algorithm implementation in Python, with a Flask web interface for user interaction and data visualization.
+This repository showcases the core SFI algorithm implementation compiled to WASM for browser execution.
